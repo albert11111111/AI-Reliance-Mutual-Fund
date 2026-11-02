@@ -19,6 +19,9 @@
 | `换手率计算.xlsx` | CSMAR 股票买卖金额节选，含 `BuyValue`、`SellValue`。不改这个文件。 |
 | `merge_buy_sell_zero.py` | 在 `…_Holder.xlsx` 上接买卖金额；有报告行时缺侧按 0，一侧减负则买卖都空。 |
 | `基金名单_fundid_date_TotalEquity_Holder_BuySell.xlsx` | 含买卖金额的半年面板；买卖成对，无单边空。不改 Holder 原表。 |
+| `费用.xlsx` | CSMAR 利润表节选，含 `TotalOperatingCost`（费用合计）。不改这个文件。 |
+| `merge_fee.py` | 在 `…_BuySell.xlsx` 上接费用合计；`1231` 用年报减半年报。 |
+| `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee.xlsx` | 再含 `TotalOperatingCost` 的半年面板。不改 BuySell 原表。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -208,6 +211,21 @@ pd.read_excel(
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_buy_sell_zero.py
 ```
 
+### TotalOperatingCost（费用合计）
+
+来源是《公募基金数据库说明书》表五十七业绩与收益分配表（`Fund_FIN_Income`）。`TotalOperatingCost` 是费用合计，单位元；只取 `DATA_TYPE_ID=3`（本期）。`费用.xlsx` 前两行是字段中文名和单位。
+
+由 `merge_fee.py` 在 `基金名单_fundid_date_TotalEquity_Holder_BuySell.xlsx` 上接出，写出新文件 `…_BuySell_Fee.xlsx`。不改 BuySell 面板和费用原表。合并键与买卖相同。换算规则与买卖一致（单列更简单）：
+
+- `0630`：直接用半年报；有报告行但原值为空视为 `0`
+- `1231` 且同年有半年报、起算日相同：年报 − 半年报（缺侧按 `0`）
+- `1231` 且同年无半年报：直接用年报（缺侧按 `0`）
+- 起算日不一致，或减出负值：该期费用留空
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_fee.py
+```
+
 ## 修改记录
 
 - 2026-10-30：由 `基金名单.xlsx` 生成 `基金名单_fundid_date.xlsx`。`date` 为成立日之后的 `0630`/`1231`，有到期日则截到到期日，样本截止 `20260630`。去掉 25 行完全重复的名单记录。3,937 只基金、46,897 行。该面板对应的是当时的名单，尚未用后来补入 CSMAR 字段的名单重做。
@@ -223,3 +241,4 @@ pd.read_excel(
 - 2026-11-02：删除旧 `merge_buy_sell.py`。现行 `merge_buy_sell_zero.py` 直接在 `…_Holder.xlsx` 上写出 `…_BuySell.xlsx`：有报告行时缺侧按 `0`；起算日相同且任一侧减负则该期买卖都空。买卖都有 43,154、都空 2,775，无单边空。减负整期留空 4 条（`007110` 2021、`163110` 2019、`400020` 2015、`019309` 2025）。Holder 与买卖原表未改。
 - 2026-11-02：`build_fundid_date.py` 长表新增 `到期日`（仍用于截断，规则不变）。重跑规模 / 持有人 / 买卖三步，行数与匹配数不变；`基金名单.xlsx` 未改。
 - 2026-11-02：写出格式改为 `excel_style.style_sheet` 按列名设置，去掉各脚本里的 Excel 列字母。
+- 2026-11-02：按说明书表五十七，把 `费用.xlsx` 的 `TotalOperatingCost` 接到新文件 `…_BuySell_Fee.xlsx`。`1231` 为年报减半年报，规则同买卖。费用有数 44,459、空 1,470；起算不一致 53、减负留空 11。BuySell 与费用原表未改。
