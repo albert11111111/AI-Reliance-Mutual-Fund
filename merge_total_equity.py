@@ -4,12 +4,21 @@ from pathlib import Path
 
 import pandas as pd
 
+from excel_style import style_sheet
+
 ROOT = Path(__file__).resolve().parent
 PANEL = ROOT / "基金名单_fundid_date.xlsx"
 SIZE = ROOT / "基金size.xlsx"
 OUT = ROOT / "基金名单_fundid_date_TotalEquity.xlsx"
-# 与 build 面板文本列一致；TotalEquity 在 N 列（多了到期日）
-TEXT_COLS = ("A", "B", "F", "G", "H", "I", "J")
+TEXT_COLS = (
+    "fundid",
+    "date",
+    "成立时间_earliest",
+    "成立时间_latest",
+    "到期日",
+    "基金ID",
+    "基金管理公司ID",
+)
 
 
 def load_size():
@@ -61,15 +70,13 @@ def build():
 
     with pd.ExcelWriter(OUT, engine="openpyxl") as writer:
         out.to_excel(writer, index=False, sheet_name="fundid_date")
-        ws = writer.sheets["fundid_date"]
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = ws.dimensions
-        for col in TEXT_COLS:
-            for cell in ws[col]:
-                cell.number_format = "@"
-        for cell in ws["N"][1:]:
-            cell.number_format = "0.00"
-        ws.column_dimensions["N"].width = 18
+        style_sheet(
+            writer.sheets["fundid_date"],
+            out.columns,
+            text_cols=TEXT_COLS,
+            number_formats={"TotalEquity": "0.00"},
+            widths={"TotalEquity": 18},
+        )
 
     print(f"rows={len(out)} matched={int(hit.sum())} missing={int((~hit).sum())}")
 

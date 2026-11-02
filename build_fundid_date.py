@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from excel_style import style_sheet
+
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "基金名单.xlsx"
 OUT = ROOT / "基金名单_fundid_date.xlsx"
@@ -24,8 +26,30 @@ KEEP = [
     "发生转型代码重复",
     "发生过转型",
 ]
-# 文本列：fundid、date、两个成立日、到期日、基金ID、公司ID
-TEXT_COLS = ("A", "B", "F", "G", "H", "I", "J")
+TEXT_COLS = (
+    "fundid",
+    "date",
+    "成立时间_earliest",
+    "成立时间_latest",
+    "到期日",
+    "基金ID",
+    "基金管理公司ID",
+)
+COL_WIDTHS = {
+    "fundid": 12,
+    "date": 12,
+    "short_name": 28,
+    "基金类型ifind": 16,
+    "基金经理": 36,
+    "成立时间_earliest": 20,
+    "成立时间_latest": 20,
+    "到期日": 12,
+    "基金ID": 14,
+    "基金管理公司ID": 16,
+    "基金管理公司名称": 22,
+    "发生转型代码重复": 18,
+    "发生过转型": 12,
+}
 
 
 def parse_day(value):
@@ -110,18 +134,12 @@ def build():
 
     with pd.ExcelWriter(OUT, engine="openpyxl") as writer:
         panel.to_excel(writer, index=False, sheet_name="fundid_date")
-        ws = writer.sheets["fundid_date"]
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = ws.dimensions
-        for col in TEXT_COLS:
-            for cell in ws[col]:
-                cell.number_format = "@"
-        widths = {
-            "A": 12, "B": 12, "C": 28, "D": 16, "E": 36, "F": 20,
-            "G": 20, "H": 12, "I": 14, "J": 16, "K": 22, "L": 18, "M": 12,
-        }
-        for col, width in widths.items():
-            ws.column_dimensions[col].width = width
+        style_sheet(
+            writer.sheets["fundid_date"],
+            panel.columns,
+            text_cols=TEXT_COLS,
+            widths=COL_WIDTHS,
+        )
 
     print(f"source_rows={n_raw}")
     print(f"funds_after_dedup={len(src)}")

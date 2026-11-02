@@ -16,12 +16,21 @@ from pathlib import Path
 
 import pandas as pd
 
+from excel_style import style_sheet
+
 ROOT = Path(__file__).resolve().parent
 PANEL = ROOT / "基金名单_fundid_date_TotalEquity_Holder.xlsx"
 TURNOVER = ROOT / "换手率计算.xlsx"
 OUT = ROOT / "基金名单_fundid_date_TotalEquity_Holder_BuySell.xlsx"
-# 与上游面板文本列一致；买卖相关列因多了到期日整体右移一列
-TEXT_COLS = ("A", "B", "F", "G", "H", "I", "J")
+TEXT_COLS = (
+    "fundid",
+    "date",
+    "成立时间_earliest",
+    "成立时间_latest",
+    "到期日",
+    "基金ID",
+    "基金管理公司ID",
+)
 NEG_TOL = -0.01  # 小于此视为减出负值，不是舍入
 
 
@@ -154,18 +163,18 @@ def build() -> None:
 
     with pd.ExcelWriter(OUT, engine="openpyxl") as writer:
         out.to_excel(writer, index=False, sheet_name="fundid_date")
-        ws = writer.sheets["fundid_date"]
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = ws.dimensions
-        for col in TEXT_COLS:
-            for cell in ws[col]:
-                cell.number_format = "@"
-        ws.column_dimensions["S"].width = 12
-        ws.column_dimensions["T"].width = 16
-        for col_letter in ("U", "V"):
-            ws.column_dimensions[col_letter].width = 18
-            for cell in ws[col_letter][1:]:
-                cell.number_format = "0.00"
+        style_sheet(
+            writer.sheets["fundid_date"],
+            out.columns,
+            text_cols=TEXT_COLS,
+            number_formats={"BuyValue": "0.00", "SellValue": "0.00"},
+            widths={
+                "BuySellPeriod": 12,
+                "BuySellStartdate": 16,
+                "BuyValue": 18,
+                "SellValue": 18,
+            },
+        )
 
     both = out["BuyValue"].notna() & out["SellValue"].notna()
     neither = out["BuyValue"].isna() & out["SellValue"].isna()
