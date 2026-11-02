@@ -8,7 +8,8 @@ ROOT = Path(__file__).resolve().parent
 PANEL = ROOT / "基金名单_fundid_date_TotalEquity.xlsx"
 HOLDER = ROOT / "机构持有占比.xlsx"
 OUT = ROOT / "基金名单_fundid_date_TotalEquity_Holder.xlsx"
-TEXT_COLS = ("A", "B", "F", "G", "H", "I")
+# 与上游面板文本列一致；数值列因多了到期日整体右移一列
+TEXT_COLS = ("A", "B", "F", "G", "H", "I", "J")
 KEEP_FROM_HOLDER = [
     "Symbol",
     "FundID",
@@ -143,14 +144,14 @@ def build():
         for col in TEXT_COLS:
             for cell in ws[col]:
                 cell.number_format = "@"
-        ws.column_dimensions["M"].width = 18
-        for cell in ws["M"][1:]:
+        ws.column_dimensions["N"].width = 18
+        for cell in ws["N"][1:]:
             cell.number_format = "0.00"
-        for col_letter in ("N", "O", "P"):
+        for col_letter in ("O", "P", "Q"):
             ws.column_dimensions[col_letter].width = 18
             for cell in ws[col_letter][1:]:
                 cell.number_format = "0.0000"
-        ws.column_dimensions["Q"].width = 12
+        ws.column_dimensions["R"].width = 12
 
     print(f"rows={len(out)} matched={int(matched.sum())} missing={int((~matched).sum())}")
     print(f"scope_总产品={int(multi.sum())} scope_本份额={int(single.sum())}")

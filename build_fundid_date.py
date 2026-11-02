@@ -17,13 +17,15 @@ KEEP = [
     "基金经理",
     "成立时间_earliest",
     "成立时间_latest",
+    "到期日",
     "基金ID",
     "基金管理公司ID",
     "基金管理公司名称",
     "发生转型代码重复",
     "发生过转型",
 ]
-TEXT_COLS = ("A", "B", "F", "G", "H", "I")
+# 文本列：fundid、date、两个成立日、到期日、基金ID、公司ID
+TEXT_COLS = ("A", "B", "F", "G", "H", "I", "J")
 
 
 def parse_day(value):
@@ -54,7 +56,7 @@ def semi_dates(inception: date, maturity: date | None):
 
 def build():
     src = pd.read_excel(SRC, dtype=str)
-    missing = [c for c in KEEP + ["到期日"] if c not in src.columns]
+    missing = [c for c in KEEP if c not in src.columns]
     if missing:
         raise SystemExit(f"基金名单缺少列: {missing}")
     n_raw = len(src)
@@ -116,7 +118,7 @@ def build():
                 cell.number_format = "@"
         widths = {
             "A": 12, "B": 12, "C": 28, "D": 16, "E": 36, "F": 20,
-            "G": 20, "H": 14, "I": 16, "J": 22, "K": 18, "L": 12,
+            "G": 20, "H": 12, "I": 14, "J": 16, "K": 22, "L": 18, "M": 12,
         }
         for col, width in widths.items():
             ws.column_dimensions[col].width = width

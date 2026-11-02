@@ -8,7 +8,8 @@ ROOT = Path(__file__).resolve().parent
 PANEL = ROOT / "基金名单_fundid_date.xlsx"
 SIZE = ROOT / "基金size.xlsx"
 OUT = ROOT / "基金名单_fundid_date_TotalEquity.xlsx"
-TEXT_COLS = ("A", "B", "F", "G", "H", "I")
+# 与 build 面板文本列一致；TotalEquity 在 N 列（多了到期日）
+TEXT_COLS = ("A", "B", "F", "G", "H", "I", "J")
 
 
 def load_size():
@@ -66,9 +67,9 @@ def build():
         for col in TEXT_COLS:
             for cell in ws[col]:
                 cell.number_format = "@"
-        for cell in ws["M"][1:]:
+        for cell in ws["N"][1:]:
             cell.number_format = "0.00"
-        ws.column_dimensions["M"].width = 18
+        ws.column_dimensions["N"].width = 18
 
     print(f"rows={len(out)} matched={int(hit.sum())} missing={int((~hit).sum())}")
 
