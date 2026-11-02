@@ -12,6 +12,9 @@
 | `基金size.xlsx` | CSMAR 资产负债表节选，含 `TotalEquity`。不改这个文件。 |
 | `merge_total_equity.py` | 把 `TotalEquity` 接到面板上，写出新文件。 |
 | `基金名单_fundid_date_TotalEquity.xlsx` | 半年面板加上 `TotalEquity`。原面板不改。 |
+| `机构持有占比.xlsx` | CSMAR 持有人结构节选。不改这个文件。 |
+| `merge_holder_ratio.py` | 把机构/个人/从业人员持有比例接到面板上，写出新文件。 |
+| `基金名单_fundid_date_TotalEquity_Holder.xlsx` | 含 `TotalEquity` 与持有人比例的半年面板。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -130,6 +133,38 @@ pd.read_excel(
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_total_equity.py
 ```
 
+### 持有人比例
+
+来源是《公募基金数据库说明书》表四十六持有人结构（`Fund_HolderStructure`），不是基金评价说明书。《基金评价数据库说明书》里没有这张持有人结构表。`机构持有占比.xlsx` 前两行是字段中文名和单位，从第三行起是数据。
+
+接到 `基金名单_fundid_date_TotalEquity_Holder.xlsx`，不改 `基金名单_fundid_date_TotalEquity.xlsx` 和持有人原表。一行面板对上一条份额报告，四个条件同时成立：
+
+| 面板 | 持有人表 | 含义 |
+| --- | --- | --- |
+| `基金ID` | `FundID` | CSMAR 基金 ID |
+| `fundid` | `Symbol` | 基金代码；面板主代码对应名单里保留的那一份额 |
+| `date` 为 `0630` | `EndDate` 同一天，且 `ReportTypeID` 为 `5` | 半年度报告 |
+| `date` 为 `1231` | `EndDate` 同一天，且 `ReportTypeID` 为 `6` | 年度报告 |
+
+说明书写明：`TotalInstitutionRatio`、`TotalIndividualRatio`、`TotalPractitionersRatio` 是总产品口径，针对分级基金。本份额口径是 `InstitutionRatio`、`IndividualRatio`、`PractitionersRatio`。
+
+写入面板的三列已经按主产品口径选过：
+
+| 写出列 | 含义 | 单位 |
+| --- | --- | --- |
+| `InstitutionRatio` | 机构持有占总份额比例 | % |
+| `IndividualRatio` | 个人持有占总份额比例 | % |
+| `PractitionersRatio` | 基金从业人员持有占总份额比例 | % |
+| `HolderRatioScope` | 该期用的口径 | `总产品` 或 `本份额` |
+
+选法：该期三个总产品比例里只要有一个非空，就判定为多份额，三项都取总产品；某一项总产品为空则该项留空，不用本份额去填，避免同一期混口径。三个总产品都空，则取本份额三项。`RelationCode` 仅作核对，不单独决定口径；例如 `000006` 在 `20190630` 为 `S0401`、用本份额 `7.24` / `92.76`，在 `20210630` 为 `S0402`、用总产品 `73.42` / `26.58`。
+
+对上 44,484 行：总产品 23,282 行，本份额 21,202 行。没对上的 1,445 行三列比例和口径都留空。空值不是 0。机构、个人、从业人员分别有数 42,916、44,400、43,503 行。
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_holder_ratio.py
+```
+
 ## 修改记录
 
 - 2026-10-30：由 `基金名单.xlsx` 生成 `基金名单_fundid_date.xlsx`。`date` 为成立日之后的 `0630`/`1231`，有到期日则截到到期日，样本截止 `20260630`。去掉 25 行完全重复的名单记录。3,937 只基金、46,897 行。该面板对应的是当时的名单，尚未用后来补入 CSMAR 字段的名单重做。
@@ -138,3 +173,4 @@ pd.read_excel(
 - 2026-10-31：用更新后的 `基金名单.xlsx` 重做 `基金名单_fundid_date.xlsx`。日期从该行 `成立时间_earliest` 之后的第一个 `0630`/`1231` 起，`到期日` 为 `0` 视为未到期，样本截止 `20260630`。长表只保留 `fundid`、`date` 和指定的 10 列。重复 `fundid` 的两行各自展开。3,902 行名单进入面板，3,880 个代码，46,214 行；6 行没有可用半年末。`基金名单.xlsx` 未改。
 - 2026-10-31：长表改为 `fundid` + `date` 唯一。重复 `fundid` 只留 `成立时间_earliest` 更早的一行来生成日期；起始日相同时留 `成立时间_latest` 更晚的一行。3,880 个代码、45,929 行。`基金名单.xlsx` 未改。
 - 2026-11-02：按说明书表五十六，把 `基金size.xlsx` 的期末 `TotalEquity` 接到新文件 `基金名单_fundid_date_TotalEquity.xlsx`。键为 `基金ID`=`FundID`、`fundid`=`MasterFundCode`，`0630` 对半年度报告、`1231` 对年度报告，截止日期必须是同一天。对上 44,507 行，1,422 行留空。原面板和规模表未改。
+- 2026-11-02：按说明书表四十六，把 `机构持有占比.xlsx` 接到新文件 `基金名单_fundid_date_TotalEquity_Holder.xlsx`。键为 `基金ID`=`FundID`、`fundid`=`Symbol`，半年末对半年度/年度报告。有总产品比例的期用总产品三项，否则用本份额三项；`HolderRatioScope` 标记口径。对上 44,484 行。原面板和持有人表未改。
