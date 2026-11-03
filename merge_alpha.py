@@ -42,6 +42,24 @@ ALPHAS = [
     ("ch4_alpha", "滚动alpha_CH4.xlsx"),
 ]
 MONTHS_PER_HALF = 6
+NEW_COLS = ["raw_ret", *(name for name, _ in ALPHAS)]
+
+# 面板已有数值列的显示格式（下游脚本沿用）
+PANEL_FORMATS = {
+    "TotalEquity": "0.00",
+    "InstitutionRatio": "0.0000",
+    "IndividualRatio": "0.0000",
+    "PractitionersRatio": "0.0000",
+    "BuyValue": "0.00",
+    "SellValue": "0.00",
+    "TotalOperatingCost": "0.00",
+    "Team": "0",
+    "Female": "0.0000",
+    "Phd": "0.0000",
+    "midAge": "0.00",
+    "largeAge": "0.00",
+    **{c: "0.000000" for c in NEW_COLS},
+}
 
 
 def half_date(year_month: pd.Series) -> pd.Series:
@@ -132,29 +150,14 @@ def build() -> None:
             check_share_class(panel, a)
         out = merge_half(out, half_year_alpha(a), name)
 
-    new_cols = ["raw_ret", *(name for name, _ in ALPHAS)]
     with pd.ExcelWriter(OUT, engine="openpyxl") as writer:
         out.to_excel(writer, index=False, sheet_name="fundid_date")
         style_sheet(
             writer.sheets["fundid_date"],
             out.columns,
             text_cols=TEXT_COLS,
-            number_formats={
-                "TotalEquity": "0.00",
-                "InstitutionRatio": "0.0000",
-                "IndividualRatio": "0.0000",
-                "PractitionersRatio": "0.0000",
-                "BuyValue": "0.00",
-                "SellValue": "0.00",
-                "TotalOperatingCost": "0.00",
-                "Team": "0",
-                "Female": "0.0000",
-                "Phd": "0.0000",
-                "midAge": "0.00",
-                "largeAge": "0.00",
-                **{c: "0.000000" for c in new_cols},
-            },
-            widths={c: 12 for c in new_cols},
+            number_formats=PANEL_FORMATS,
+            widths={c: 12 for c in NEW_COLS},
         )
     print(f"面板行={len(out)}，写出 {OUT.name}")
 

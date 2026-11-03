@@ -42,6 +42,8 @@
 | `滚动alpha_CAPM.xlsx` / `…_三因子.xlsx` / `…_四因子.xlsx` / `…_五因子.xlsx` / `…_CH3.xlsx` / `…_CH4.xlsx` | 各模型月度 alpha、历史截距与 beta。 |
 | `merge_alpha.py` | 把半年原始收益率和 6 个模型的半年平均 alpha（满 6 个月才填）接到 Manager 面板。 |
 | `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee_Manager_Alpha.xlsx` | 再含 `raw_ret` 与 `capm_alpha`/`ff3_alpha`/`car4_alpha`/`ff5_alpha`/`ch3_alpha`/`ch4_alpha`。不改 Manager 原表。 |
+| `build_controls.py` | 在 Alpha 面板上计算控制变量 `Size`/`Age`/`Turnover`/`Expense`/`Flow`。 |
+| `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee_Manager_Alpha_Controls.xlsx` | Alpha 面板再加 5 个控制变量。不改 Alpha 原表。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -383,6 +385,45 @@ alpha 结果（6 列相同）：有值 28,098 行；留空 17,831 行，其中 6
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_alpha.py
 ```
 
+### 控制变量
+
+`build_controls.py` 读 `…_Manager_Alpha.xlsx`，写出 `…_Manager_Alpha_Controls.xlsx`（原列不变，末尾加 5 列）。记 \(TE_t\) 为本期 `TotalEquity`（基金层面期末净资产，含全部份额，元），\(TE_{t-1}\) 为同一基金上一个半年末的 `TotalEquity`。
+
+| 列 | 公式 | 说明 |
+| --- | --- | --- |
+| `Size` | \(\ln TE_t\) | 基金规模 |
+| `Age` | \(\ln(1+\text{月数})\) | 月数 = `date` 与 `成立时间_earliest` 的自然月差，成立当月为 0 |
+| `Turnover` | \(\dfrac{(BuyValue+SellValue)/2}{(TE_{t-1}+TE_t)/2}\) | 半年换手率，不年化 |
+| `Expense` | \(\dfrac{TotalOperatingCost}{(TE_{t-1}+TE_t)/2}\) | 半年费用率，不年化 |
+| `Flow` | \(\dfrac{TE_t-(1+r_t)TE_{t-1}}{TE_t}\) | \(r_t=(1+\text{raw\_ret})^6-1\)，本半年累计复权收益（主代码份额） |
+
+- 基金家族规模暂不计算。换手率、费用率直接用当期半年数值，不做过去一年平均。
+- 上一行必须正好是前一个半年末（0630 对上年 1231，1231 对同年 0630），否则或其 `TotalEquity` 缺失时，`Turnover`/`Expense`/`Flow` 留空。
+- 1231 行 `BuySellStartdate` 早于 7 月（年报全年买卖额充当下半年）时 `Turnover` 留空：218 行，其中 211 行在 2010 年（CSMAR 缺这些基金 2010 年半年报买卖额）。费用对应的 717 行「年报充当下半年」都没有上期净资产，已自动留空。
+- `raw_ret` 为空时 `Flow` 留空。不缩尾，不截断样本期。
+
+结果：
+
+| 变量 | 有值 | 留空原因 | 中位数 | 1% / 99% 分位 |
+| --- | --- | --- | --- | --- |
+| `Size` | 44,507 | TE 缺 1,422 | 19.97 | 16.06 / 23.34 |
+| `Age` | 45,929 | — | 3.76 | 0 / 5.41 |
+| `Turnover` | 39,363 | TE 缺 1,422；无上期 TE 3,804；买卖缺 1,122；年报充当 H2 218 | 1.36 | 0.11 / 8.08 |
+| `Expense` | 40,643 | TE 缺 1,422；无上期 TE 3,804；费用缺 60 | 0.0091 | 0.0046 / 0.0283 |
+| `Flow` | 40,681 | TE 缺 1,422；无上期 TE 3,804；`raw_ret` 缺 22 | −0.080 | −2.55 / 0.83 |
+
+数据异常：
+
+- `Turnover` 大于 10 的有 188 行，最大 34.9（`009128` 20260630），多为规模较小或规模快速变化的基金。
+- `Expense` 为负 3 行，均在 20090630：`166001`、`202003`、`519694`，源表 `TotalOperatingCost` 本身为负。
+- `Flow` 分母是期末规模，大额赎回时无下界：小于 −1 的有 1,936 行，最小 −487.9（`003190` 20180630，规模从 5.06 亿降到 101 万）。上界不超过 1。实证前需考虑缩尾。
+- `TotalEquity` 为全部份额合计，而 \(r_t\) 只是主代码份额收益，作为近似。
+- 时点：这些变量按报告期末归属，未按公告日过滤；用于预测时须滞后一期。
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python build_controls.py
+```
+
 ## 修改记录
 
 - 2026-10-30：由 `基金名单.xlsx` 生成 `基金名单_fundid_date.xlsx`。`date` 为成立日之后的 `0630`/`1231`，有到期日则截到到期日，样本截止 `20260630`。去掉 25 行完全重复的名单记录。3,937 只基金、46,897 行。该面板对应的是当时的名单，尚未用后来补入 CSMAR 字段的名单重做。
@@ -410,3 +451,4 @@ alpha 结果（6 列相同）：有值 28,098 行；留空 17,831 行，其中 6
 - 2026-11-03：`rolling_alpha.py` 样本改为从面板成立月起算（转型基金不再用转型前旧基金净值估 beta），5 只基金受影响，重跑 6 个模型：CSMAR 各 183,297 行，CH 各 183,142 行。
 - 2026-11-03：新增 `merge_alpha.py`，6 个模型的月度 alpha 按半年取平均（满 6 个月才填），经份额类别信息表核对 `fundid`/`基金ID` 后左连接到 Manager 面板，写出 `…_Manager_Alpha.xlsx`。45,929 行不变，每列有值 28,098。Manager 原表与 alpha 表未改。
 - 2026-11-03：`merge_alpha.py` 新增 `raw_ret`（`月度净值.xlsx` 半年 6 个月几何平均月收益，样本规则同滚动回归但无 24 个月窗口），有值 41,324。`rolling_alpha.py` 把样本判定抽成 `mark_sample` 供两处共用，alpha 结果不变。
+- 2026-11-03：新增 `build_controls.py`，在 Alpha 面板上计算 `Size`、`Age`、`Turnover`、`Expense`、`Flow`（半年口径，家族规模暂不算），写出 `…_Alpha_Controls.xlsx`；年报充当下半年的 218 行换手率留空。`merge_alpha.py` 的格式字典抽成 `PANEL_FORMATS` 供复用。Alpha 原表未改。
