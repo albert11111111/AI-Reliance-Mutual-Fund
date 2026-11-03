@@ -25,6 +25,11 @@
 | `Fund_FundManager.xlsx` | CSMAR 基金经理任期表。不改这个文件。 |
 | `merge_fund_manager.py` | 在 `…_Fee.xlsx` 上按时点接经理团队特征（宽表不扩行）。 |
 | `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee_Manager.xlsx` | 再含 `Team`/`Female`/`Phd`/`midAge`/`largeAge`。不改 Fee 原表。 |
+| `无风险利率.xlsx` | CSMAR 定期整存整取三个月利率变更表（`Irfid02`，单位 %）。不改。 |
+| `月度净值.xlsx` | CSMAR 基金份额月度净值。不改。 |
+| `build_rf_monthly.py` | 年化利率→月度 `rf_monthly`，并按 `year_month` 接到净值。 |
+| `无风险利率_月度.xlsx` | 连续日历月无风险利率。 |
+| `月度净值_rf.xlsx` | 月度净值左连接 `rf_monthly`。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -255,6 +260,22 @@ pd.read_excel(
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_fund_manager.py
 ```
 
+### 月度无风险利率
+
+源字段 `Irfid02` 为定期整存整取三个月年化利率（%）。月度利率：
+
+\[
+r_{f,t}^{月}=\left(1+\frac{q_t}{100}\right)^{1/12}-1
+\]
+
+`无风险利率.xlsx` 只有利率变更日。先扩成连续日历月：该月末及以前最近一次变更的 `q` 即为当月 `q`（中间无变更的月份沿用上一档）。再写出 `无风险利率_月度.xlsx`（`year_month`、`month_end`、`RateChangeDate`、`q_annual_pct`、`rf_monthly`）。
+
+与 `月度净值.xlsx` 对齐：净值 `TradingDate` 常是当月最后一个**交易日**（约 30% 不是日历月末），不能按精确日期对利率表。用 `TradingDate` 的日历年月 `year_month`（`YYYY-MM`）左连接月度利率，得到 `月度净值_rf.xlsx`。当前净值 274,423 行全部匹配到利率。
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python build_rf_monthly.py
+```
+
 ## 修改记录
 
 - 2026-10-30：由 `基金名单.xlsx` 生成 `基金名单_fundid_date.xlsx`。`date` 为成立日之后的 `0630`/`1231`，有到期日则截到到期日，样本截止 `20260630`。去掉 25 行完全重复的名单记录。3,937 只基金、46,897 行。该面板对应的是当时的名单，尚未用后来补入 CSMAR 字段的名单重做。
@@ -273,3 +294,4 @@ pd.read_excel(
 - 2026-11-02：按说明书表五十七，把 `费用.xlsx` 的 `TotalOperatingCost` 接到新文件 `…_BuySell_Fee.xlsx`。`1231` 为年报减半年报，规则同买卖。费用有数 44,459、空 1,470；起算不一致 53、减负留空 11。BuySell 与费用原表未改。
 - 2026-11-03：按说明书表十，把 `Fund_FundManager.xlsx` 按时点接到新文件 `…_Fee_Manager.xlsx`。写出 `Team`/`Female`/`Phd`/`midAge`/`largeAge`（从业年限中位数/最大值）；`PositionState` 与离职日交叉验证通过。有团队 45,926、无人在职 3；Fee 与经理原表未改。
 - 2026-11-03：名单空窗补丁——`007449` 两期补董理、`540007` 一期补廖志峰；无人在职清零。并检查从业年限：同基金同名多任期无下降；仅按姓名有下降，疑同名。
+- 2026-11-03：`build_rf_monthly.py` 将整存整取三月期年化利率换成月度 `rf_monthly`（缺月沿用），按 `year_month` 接到净值，写出 `无风险利率_月度.xlsx` 与 `月度净值_rf.xlsx`。
