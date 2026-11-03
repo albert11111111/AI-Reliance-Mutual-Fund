@@ -22,6 +22,9 @@
 | `费用.xlsx` | CSMAR 利润表节选，含 `TotalOperatingCost`（费用合计）。不改这个文件。 |
 | `merge_fee.py` | 在 `…_BuySell.xlsx` 上接费用合计；`1231` 用年报减半年报。 |
 | `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee.xlsx` | 再含 `TotalOperatingCost` 的半年面板。不改 BuySell 原表。 |
+| `Fund_FundManager.xlsx` | CSMAR 基金经理任期表。不改这个文件。 |
+| `merge_fund_manager.py` | 在 `…_Fee.xlsx` 上按时点接经理团队特征（宽表不扩行）。 |
+| `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee_Manager.xlsx` | 再含 `Team`/`Female`/`Phd`/`midAge`/`largeAge`。不改 Fee 原表。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -226,6 +229,32 @@ pd.read_excel(
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_fee.py
 ```
 
+### 基金经理团队特征（时点）
+
+来源是《公募基金数据库说明书》表十基金经理文件（`Fund_FundManager`）。由 `merge_fund_manager.py` 在 `…_BuySell_Fee.xlsx` 上左连接写出 `…_Fee_Manager.xlsx`。不改 Fee 面板和经理原表。合并键：`基金ID`=`FundID`、`fundid`=`MasterFundCode`。
+
+在职判定（point-in-time）：`ServiceStartDate ≤ date`，且 `ServiceEndDate` 为空或 `≥ date`（离职日当天仍算在职）。`PositionState`（1 现任 / 2 前任 / 3 代任）只与离职日做交叉验证，不代替区间过滤。
+
+多名经理时保持 `fundid×date` 一行，追加：
+
+| 列 | 含义 |
+| --- | --- |
+| `Team` | 该半年末在职经理人数；无人在职则空（不是 0） |
+| `Female` | 女性经理人数 / `Team` |
+| `Phd` | 博士学历（`DegreeID=P0101`）人数 / `Team` |
+| `midAge` | 在职成员证券从业年限（`BusinessDuration`）的中位数；不是出生年龄 |
+| `largeAge` | 在职成员从业年限的最大值 |
+
+从业年限缺失时，`midAge`/`largeAge` 只在有年限的成员上计算；全员缺失则这两列空，但 `Team`/`Female`/`Phd` 仍可算。名单里的 `基金经理` 文本列保留，那是静态名单口径。
+
+名单空窗补丁（CSMAR 任期缺口、按名单文案强制在职）：`007449` 的 `20201231`/`20210630` 计入董理；`540007` 的 `20110630` 计入廖志峰。这两人在对应任期行上 `BusinessDuration` 本身为空，故补丁后 `midAge`/`largeAge` 仍空。
+
+`BusinessDuration` 是行内快照，不是随日历自动递增的序列；同基金同名多任期未见下降，仅按姓名汇总会出现“下降”，多半是同名不同人。
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_fund_manager.py
+```
+
 ## 修改记录
 
 - 2026-10-30：由 `基金名单.xlsx` 生成 `基金名单_fundid_date.xlsx`。`date` 为成立日之后的 `0630`/`1231`，有到期日则截到到期日，样本截止 `20260630`。去掉 25 行完全重复的名单记录。3,937 只基金、46,897 行。该面板对应的是当时的名单，尚未用后来补入 CSMAR 字段的名单重做。
@@ -242,3 +271,5 @@ pd.read_excel(
 - 2026-11-02：`build_fundid_date.py` 长表新增 `到期日`（仍用于截断，规则不变）。重跑规模 / 持有人 / 买卖三步，行数与匹配数不变；`基金名单.xlsx` 未改。
 - 2026-11-02：写出格式改为 `excel_style.style_sheet` 按列名设置，去掉各脚本里的 Excel 列字母。
 - 2026-11-02：按说明书表五十七，把 `费用.xlsx` 的 `TotalOperatingCost` 接到新文件 `…_BuySell_Fee.xlsx`。`1231` 为年报减半年报，规则同买卖。费用有数 44,459、空 1,470；起算不一致 53、减负留空 11。BuySell 与费用原表未改。
+- 2026-11-03：按说明书表十，把 `Fund_FundManager.xlsx` 按时点接到新文件 `…_Fee_Manager.xlsx`。写出 `Team`/`Female`/`Phd`/`midAge`/`largeAge`（从业年限中位数/最大值）；`PositionState` 与离职日交叉验证通过。有团队 45,926、无人在职 3；Fee 与经理原表未改。
+- 2026-11-03：名单空窗补丁——`007449` 两期补董理、`540007` 一期补廖志峰；无人在职清零。并检查从业年限：同基金同名多任期无下降；仅按姓名有下降，疑同名。
