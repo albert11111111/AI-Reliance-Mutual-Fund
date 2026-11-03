@@ -34,6 +34,10 @@
 | `月度净值_rf_三因子.xlsx` | 含 `RiskPremium1`/`SMB1`/`HML1`。 |
 | `月度净值_rf_四因子.xlsx` | 再含 Carhart `UMD1`。 |
 | `月度净值_rf_五因子.xlsx` | 含 `RMW1`/`CMA1`（`Portfolios=1` 的 2×3）。 |
+| `CH因子_鸣石_20261103/` | 鸣石 CH3/CH4 月度因子原文件与说明。不改。 |
+| `merge_ch_factors.py` | 把 CH3/CH4 接到 `月度净值_rf`，各出一文件。 |
+| `月度净值_rf_CH3.xlsx` | 含 `mktrf`/`SMB`/`VMG` 与 `CH_rf_mon`。 |
+| `月度净值_rf_CH4.xlsx` | 再含 `PMO`（用 CH4 自身 `SMB`）。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -297,6 +301,23 @@ r_{f,t}^{月}=\left(1+\frac{q_t}{100}\right)^{1/12}-1
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_ff_factors.py
 ```
 
+### 鸣石 CH3 / CH4 月度因子
+
+源文件在 `CH因子_鸣石_20261103/`（Liu-Stambaugh-Yuan 中国规模与价值因子）。`merge_ch_factors.py` 按 `year_month`（由 `mnthdt` 转出）左连接到 `月度净值_rf.xlsx`，分别写出 `月度净值_rf_CH3.xlsx`、`月度净值_rf_CH4.xlsx`。
+
+| 列 | 含义 |
+| --- | --- |
+| `CH_rf_mon` | 鸣石月度无风险利率（一年期存款折月，小数制）；与面板 `rf_monthly`（三月定存）不同 |
+| `mktrf` | 市场超额收益，已减 CH 无风险利率，回归时不要再减 |
+| `SMB` / `VMG` | 规模、E/P 价值因子；CH4 的 `SMB` 与 CH3 不同，勿混用 |
+| `PMO` | 仅 CH4，异常换手率情绪因子 |
+
+因子覆盖 2000-01～2026-08；净值在 1998-03～1999-12 的月份会因子留空。数值为小数制。
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_ch_factors.py
+```
+
 ## 修改记录
 
 - 2026-10-30：由 `基金名单.xlsx` 生成 `基金名单_fundid_date.xlsx`。`date` 为成立日之后的 `0630`/`1231`，有到期日则截到到期日，样本截止 `20260630`。去掉 25 行完全重复的名单记录。3,937 只基金、46,897 行。该面板对应的是当时的名单，尚未用后来补入 CSMAR 字段的名单重做。
@@ -317,3 +338,4 @@ r_{f,t}^{月}=\left(1+\frac{q_t}{100}\right)^{1/12}-1
 - 2026-11-03：名单空窗补丁——`007449` 两期补董理、`540007` 一期补廖志峰；无人在职清零。并检查从业年限：同基金同名多任期无下降；仅按姓名有下降，疑同名。
 - 2026-11-03：`build_rf_monthly.py` 将整存整取三月期年化利率换成月度 `rf_monthly`（缺月沿用），按 `year_month` 接到净值，写出 `无风险利率_月度.xlsx` 与 `月度净值_rf.xlsx`。
 - 2026-11-03：`merge_ff_factors.py` 按 `P9714`+流通市值加权把三/四/五因子接到净值，分别写出 `月度净值_rf_三因子.xlsx`、`…_四因子.xlsx`、`…_五因子.xlsx`。
+- 2026-11-03：`merge_ch_factors.py` 把鸣石 CH3/CH4 月度因子接到净值，写出 `月度净值_rf_CH3.xlsx`、`…_CH4.xlsx`。
