@@ -38,6 +38,8 @@
 | `merge_ch_factors.py` | 把 CH3/CH4 接到 `月度净值_rf`，各出一文件。 |
 | `月度净值_rf_CH3.xlsx` | 含 `mktrf`/`SMB`/`VMG` 与 `CH_rf_mon`。 |
 | `月度净值_rf_CH4.xlsx` | 再含 `PMO`（用 CH4 自身 `SMB`）。 |
+| `rolling_alpha.py` | 24 个月滚动回归（statsmodels `RollingOLS`）计算月度 alpha。 |
+| `滚动alpha_CAPM.xlsx` / `…_三因子.xlsx` / `…_四因子.xlsx` / `…_五因子.xlsx` | 各模型月度 alpha、历史截距与 beta。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -318,6 +320,42 @@ r_{f,t}^{月}=\left(1+\frac{q_t}{100}\right)^{1/12}-1
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_ch_factors.py
 ```
 
+### 滚动回归月度 alpha（CAPM / 三因子 / 四因子 / 五因子 / CH3 / CH4）
+
+`rolling_alpha.py` 分别读取 `月度净值_rf_三因子.xlsx`、`…_四因子.xlsx`、`…_五因子.xlsx`、`月度净值_rf_CH3.xlsx`、`…_CH4.xlsx`，写出 `滚动alpha_CAPM.xlsx`、`滚动alpha_三因子.xlsx`、`…_四因子.xlsx`、`…_五因子.xlsx`、`滚动alpha_CH3.xlsx`、`…_CH4.xlsx`（只保留算出 alpha 的行）。CAPM 只用三因子表里的市场因子 `RiskPremium1`。
+
+对基金 \(j\)、评价月 \(t\)：
+
+\[
+R_{j,s}=\widehat a_{j,t-1}+\sum_k\widehat\beta_{j,k,t-1}F_{k,s}+\varepsilon_{j,s},\quad s=t-24,\ldots,t-1
+\]
+
+\[
+\alpha_{j,t}=R_{j,t}-\sum_k\widehat\beta_{j,k,t-1}F_{k,t}
+\]
+
+- 被解释变量 \(R\) = `AdjustedNAVGrowth/100 − rf`，rf 与因子口径一致：CSMAR 四个模型用 `rf_monthly`，CH3/CH4 用 `CH_rf_mon`（`mktrf` 已减该 rf）。
+- 因子：CAPM `RiskPremium1`；三因子 `RiskPremium1, SMB1, HML1`；四因子再加 `UMD1`；五因子 `RiskPremium1, SMB1, HML1, RMW1, CMA1`（用五因子表自身的 `SMB1`/`HML1`）；CH3 `mktrf, SMB, VMG`；CH4 `mktrf, SMB, VMG, PMO`（用 CH4 自身的 `SMB`）。
+- CH 因子从 2000-01 起，CH3/CH4 只用 2000-01 及以后月份；建仓月仍按基金完整净值历史判定（老基金不会把 2000-01 误当建仓月）。
+- 历史回归含截距；当月 alpha **不减**历史截距；beta 每月重估；窗口截止上月，不含当月。实现上 `RollingOLS(window=24)` 第 \(i\) 行用 \(i-23..i\)，参数后移一行即得 \(i-24..i-1\)。
+- 建仓期：每只基金首行增长率本身为空，第一个非空增长率（建仓月）剔除，从第二个起计数。
+- 缺月：缺月之后第一行的增长率跨越多个月，剔除；只在日历连续的有效段内滚动，窗口不跨缺月。
+- 段内满 24 个月后的下一个月起出 alpha。例：`000006` 剔除 2019-04，用 2019-05～2021-04 估计，首个 alpha 在 2021-05。
+
+| 列 | 含义 |
+| --- | --- |
+| `ExcessRet` | 当月超额收益 \(R_{j,t}\) |
+| `alpha` | 当月 alpha（不减截距） |
+| `a_hat` | 上月窗口的历史截距，仅作参考，不参与 alpha |
+| `beta_<因子>` | 上月窗口估计的因子暴露 |
+| `WindowStart` / `WindowEnd` | 估计窗口首末月（\(t-24\)、\(t-1\)） |
+
+结果：CSMAR 四个模型都是 183,557 行、3,125 只基金，月份 2000-05～2026-06；CH3/CH4 都是 183,402 行、3,125 只基金，月份 2002-01～2026-06（少的 155 行是 2000-05～2001-12 的 alpha）。818 只基金无 alpha，多为净值不足 27 个月的新基金（其中 737 只仍存续到 2026-06）；有缺月的 36 只基金中 3 只因此无 alpha。
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python rolling_alpha.py
+```
+
 ## 修改记录
 
 - 2026-10-30：由 `基金名单.xlsx` 生成 `基金名单_fundid_date.xlsx`。`date` 为成立日之后的 `0630`/`1231`，有到期日则截到到期日，样本截止 `20260630`。去掉 25 行完全重复的名单记录。3,937 只基金、46,897 行。该面板对应的是当时的名单，尚未用后来补入 CSMAR 字段的名单重做。
@@ -339,3 +377,6 @@ r_{f,t}^{月}=\left(1+\frac{q_t}{100}\right)^{1/12}-1
 - 2026-11-03：`build_rf_monthly.py` 将整存整取三月期年化利率换成月度 `rf_monthly`（缺月沿用），按 `year_month` 接到净值，写出 `无风险利率_月度.xlsx` 与 `月度净值_rf.xlsx`。
 - 2026-11-03：`merge_ff_factors.py` 按 `P9714`+流通市值加权把三/四/五因子接到净值，分别写出 `月度净值_rf_三因子.xlsx`、`…_四因子.xlsx`、`…_五因子.xlsx`。
 - 2026-11-03：`merge_ch_factors.py` 把鸣石 CH3/CH4 月度因子接到净值，写出 `月度净值_rf_CH3.xlsx`、`…_CH4.xlsx`。
+- 2026-11-03：新增 `rolling_alpha.py`，对三/四/五因子做 24 个月滚动回归（含截距、窗口截止上月），按上月 beta 计算当月 alpha（不减截距），写出 `滚动alpha_三因子.xlsx`、`…_四因子.xlsx`、`…_五因子.xlsx`。剔除建仓月与缺月后首行，窗口不跨缺月。各 183,557 行、3,125 只基金。净值原表未改。
+- 2026-11-03：`rolling_alpha.py` 新增 CAPM（只用三因子表的 `RiskPremium1`），写出 `滚动alpha_CAPM.xlsx`，样本规则同上，183,557 行、3,125 只基金。
+- 2026-11-03：`rolling_alpha.py` 新增 CH3/CH4（被解释变量减 `CH_rf_mon`，样本从 2000-01 截断），写出 `滚动alpha_CH3.xlsx`、`…_CH4.xlsx`，各 183,402 行、3,125 只基金，首个 alpha 在 2002-01。建仓月改为只按增长率非空判定（不受因子缺失影响），CSMAR 四个模型结果不变。
