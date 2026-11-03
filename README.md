@@ -30,6 +30,10 @@
 | `build_rf_monthly.py` | 年化利率→月度 `rf_monthly`，并按 `year_month` 接到净值。 |
 | `无风险利率_月度.xlsx` | 连续日历月无风险利率。 |
 | `月度净值_rf.xlsx` | 月度净值左连接 `rf_monthly`。 |
+| `merge_ff_factors.py` | 把三/四/五因子（沪深全 A、流通市值加权）接到 `月度净值_rf`。 |
+| `月度净值_rf_三因子.xlsx` | 含 `RiskPremium1`/`SMB1`/`HML1`。 |
+| `月度净值_rf_四因子.xlsx` | 再含 Carhart `UMD1`。 |
+| `月度净值_rf_五因子.xlsx` | 含 `RMW1`/`CMA1`（`Portfolios=1` 的 2×3）。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -276,6 +280,23 @@ r_{f,t}^{月}=\left(1+\frac{q_t}{100}\right)^{1/12}-1
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python build_rf_monthly.py
 ```
 
+### Fama-French / Carhart 月度因子
+
+源表为 CSMAR 三因子、Carhart 四因子、五因子月度指标。`merge_ff_factors.py` 统一口径后接到 `月度净值_rf.xlsx`，**各出一文件**（不改净值与因子源表）：
+
+| 口径 | 取值 |
+| --- | --- |
+| 市场 | `MarkettypeID=P9714`（沪深 A 股和创业板和科创板，即沪深全 A） |
+| 加权 | 流通市值加权（字段名带 `1`：`RiskPremium1`、`SMB1`、`HML1`、`UMD1`、`RMW1`、`CMA1`） |
+| 五因子组合划分 | `Portfolios=1`（2×3，与经典三因子一致） |
+| 合并键 | 净值 `year_month` = 因子 `TradingMonth`（`YYYY-MM`） |
+
+`RiskPremium1` 已是市场组合相对三月定存的超额收益。后续滚动回归可用复权净值月增长率（注意单位 %）减 `rf_monthly` 作被解释变量。四因子早期部分月份 `SMB1`/`HML1`/`UMD1` 可能为空（动量形成期等），合并时保留空值并在日志汇报。
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_ff_factors.py
+```
+
 ## 修改记录
 
 - 2026-10-30：由 `基金名单.xlsx` 生成 `基金名单_fundid_date.xlsx`。`date` 为成立日之后的 `0630`/`1231`，有到期日则截到到期日，样本截止 `20260630`。去掉 25 行完全重复的名单记录。3,937 只基金、46,897 行。该面板对应的是当时的名单，尚未用后来补入 CSMAR 字段的名单重做。
@@ -295,3 +316,4 @@ r_{f,t}^{月}=\left(1+\frac{q_t}{100}\right)^{1/12}-1
 - 2026-11-03：按说明书表十，把 `Fund_FundManager.xlsx` 按时点接到新文件 `…_Fee_Manager.xlsx`。写出 `Team`/`Female`/`Phd`/`midAge`/`largeAge`（从业年限中位数/最大值）；`PositionState` 与离职日交叉验证通过。有团队 45,926、无人在职 3；Fee 与经理原表未改。
 - 2026-11-03：名单空窗补丁——`007449` 两期补董理、`540007` 一期补廖志峰；无人在职清零。并检查从业年限：同基金同名多任期无下降；仅按姓名有下降，疑同名。
 - 2026-11-03：`build_rf_monthly.py` 将整存整取三月期年化利率换成月度 `rf_monthly`（缺月沿用），按 `year_month` 接到净值，写出 `无风险利率_月度.xlsx` 与 `月度净值_rf.xlsx`。
+- 2026-11-03：`merge_ff_factors.py` 按 `P9714`+流通市值加权把三/四/五因子接到净值，分别写出 `月度净值_rf_三因子.xlsx`、`…_四因子.xlsx`、`…_五因子.xlsx`。
