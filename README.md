@@ -44,6 +44,8 @@
 | `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee_Manager_Alpha.xlsx` | 再含 `raw_ret` 与 `capm_alpha`/`ff3_alpha`/`car4_alpha`/`ff5_alpha`/`ch3_alpha`/`ch4_alpha`。不改 Manager 原表。 |
 | `build_controls.py` | 在 Alpha 面板上计算控制变量 `Size`/`Age`/`Turnover`/`Expense`/`Flow`。 |
 | `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee_Manager_Alpha_Controls.xlsx` | Alpha 面板再加 5 个控制变量。不改 Alpha 原表。 |
+| `merge_evaluation.py` | 把 `基金日净值近半年评价文件*` 的全部指标按半年最后一个交易日接到 Controls 面板末尾。 |
+| `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee_Manager_Alpha_Controls_Eval.xlsx` | Controls 面板再加 CSMAR 近半年评价指标（`EvalDate` 起共 44 列）。不改 Controls 原表。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -424,6 +426,28 @@ alpha 结果（6 列相同）：有值 28,098 行；留空 17,831 行，其中 6
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python build_controls.py
 ```
 
+### CSMAR 近半年评价指标（基金日净值近半年评价文件）
+
+`merge_evaluation.py` 读 19 个 `基金日净值近半年评价文件*/FUND_EVL_DAYAHAY.xlsx`（基金评价数据库「基金日净值近半年评价文件」），写出 `…_Controls_Eval.xlsx`（原列不变，末尾加 `EvalDate` 及源表除 `TradingDate`/`Symbol`/`FullName`/`FundClassID` 外的全部列）。源表每行是某份额在 `TradingDate` 这天、回看近半年日净值算出的评价指标：平均收益率、标准差、Sharpe、Beta、詹森 Alpha、Treynor、TM / CL 择时与选股、区间收益率，以及每项的同类排名和参与排名基金数；市场组合按类别（股票型 F0401 上证综指，债券型 F0402 上证国债，混合型 F0403 两者各 50%）。
+
+- 源文件：17 个不同批次，每批覆盖当年 7 月至次年 6 月，合起来为 2009-07 至 2026-06，无缺年。`123209348` 有三份完全相同的副本（MD5 相同），只读一次。
+- 代码：面板 `fundid` = 源表 `Symbol`（说明书中为基金代码，即份额代码）。源表 3,656 个 `Symbol` 的 `FundClassID` 与 `月度净值.xlsx` 一致，即都是面板主代码份额。
+- 日期：面板 `date`（0630 / 1231）取该半年最后一个交易日的那一行，记在 `EvalDate`。CSMAR 在 6/30、12/31 落在周末时仍给部分基金记一行（如 2018-06-30 周六只有 483 只，2018-06-29 周五有 737 只），这些不是交易日，用了会使排名不在同一截面，故只取工作日中的最大日期。共 10 个半年末因此提前到周五（如 20180630 → 2018-06-29）。
+- 同一 `Symbol` × 半年末在源表中唯一，左连接，行数不变。
+
+结果：45,929 行中有值 41,320，留空 4,609：评价文件起点（20091231）之前 922；整只基金不在评价文件 253（基本是 20260630 刚成立的新基金）；早于该基金首次评价 3,434（成立不满约半年，CSMAR 尚未评价）；中间缺失 0。源表 `CategoryID` 只有 S0601 普通股票型 8,638、S0604 混合型 32,679、S0602 债券型 3 行。
+
+数据异常：
+
+- `RangeReturn` 与 `raw_ret` 折算的半年收益 \((1+\text{raw\_ret})^6-1\) 相关系数 0.9955，差值中位数 0.79 个百分点，最大 31 个百分点。差异来自窗口：CSMAR 的「近半年」从窗口内第一个日净值算起。建仓期只披露周净值的新基金窗口更短，如 `025686` 20260630 的区间起点是 2026-01-09 的净值 1.1763，`RangeReturn` 为 118%，而 2025-12-31 至 2026-06-30 实际涨了 149%。
+- `001039` 20151231 的 `RangeReturn` 为 +12.3%，而 `AvgReturn` 为负，月度净值 6/30→12/31 也是 −8.4%，CSMAR 表内口径不一致。
+- 极端值：`Treynor` 最大 276.1（Beta 接近 0 时分母很小），`Beta` 最小 −0.89、最大 8.73，均未缩尾。
+- 时点：指标只用 `EvalDate` 及之前的日净值，半年末即可得到。排名为当日同类截面排名。
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_evaluation.py
+```
+
 ## 修改记录
 
 - 2026-10-30：由 `基金名单.xlsx` 生成 `基金名单_fundid_date.xlsx`。`date` 为成立日之后的 `0630`/`1231`，有到期日则截到到期日，样本截止 `20260630`。去掉 25 行完全重复的名单记录。3,937 只基金、46,897 行。该面板对应的是当时的名单，尚未用后来补入 CSMAR 字段的名单重做。
@@ -452,3 +476,4 @@ alpha 结果（6 列相同）：有值 28,098 行；留空 17,831 行，其中 6
 - 2026-11-03：新增 `merge_alpha.py`，6 个模型的月度 alpha 按半年取平均（满 6 个月才填），经份额类别信息表核对 `fundid`/`基金ID` 后左连接到 Manager 面板，写出 `…_Manager_Alpha.xlsx`。45,929 行不变，每列有值 28,098。Manager 原表与 alpha 表未改。
 - 2026-11-03：`merge_alpha.py` 新增 `raw_ret`（`月度净值.xlsx` 半年 6 个月几何平均月收益，样本规则同滚动回归但无 24 个月窗口），有值 41,324。`rolling_alpha.py` 把样本判定抽成 `mark_sample` 供两处共用，alpha 结果不变。
 - 2026-11-03：新增 `build_controls.py`，在 Alpha 面板上计算 `Size`、`Age`、`Turnover`、`Expense`、`Flow`（半年口径，家族规模暂不算），写出 `…_Alpha_Controls.xlsx`；年报充当下半年的 218 行换手率留空。`merge_alpha.py` 的格式字典抽成 `PANEL_FORMATS` 供复用。Alpha 原表未改。
+- 2026-11-03：新增 `merge_evaluation.py`，把 17 批（去掉 2 份重复副本）基金日净值近半年评价文件的全部指标，按 `fundid`=`Symbol`（`FundClassID` 与月度净值一致）及半年最后一个交易日（剔除周末记录）接到 Controls 面板末尾，写出 `…_Controls_Eval.xlsx`。有值 41,320，留空 4,609。Controls 原表与评价文件未改。
