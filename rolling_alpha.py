@@ -13,7 +13,9 @@
 被解释变量：ExcessRet = AdjustedNAVGrowth / 100 − rf（CSMAR 因子用 rf_monthly，CH 因子用 CH_rf_mon）。
 
 样本规则：
-- 每只基金首行增长率本身为空（成立月）；第一个非空增长率视为建仓期月份，剔除；
+- 样本从面板成立月（基金名单_fundid_date 的 成立时间_earliest）起算，之前的净值
+  （如转型前旧基金）不进入回归；
+- 成立月起第一个非空增长率视为建仓期月份，剔除；
 - 缺月之后的第一行增长率跨越多个月，也剔除；
 - CH 因子从 2000-01 起，此前月份截断；
 - 只在日历连续的有效月份段内滚动，窗口不跨缺月；段内满 24 个月后，下一个月起出 alpha。
@@ -90,6 +92,46 @@ SPECS = [
 ]
 
 ID_COLS = ["Symbol", "FundClassID", "FullName", "TradingDate", "year_month"]
+FUND_LIST = ROOT / "基金名单_fundid_date.xlsx"  # 取各 fundid 的面板成立日
+
+
+def load_inception() -> pd.Series:
+    """面板各基金成立月（YYYY-MM），索引为 fundid（= 净值主代码份额 Symbol）。
+
+    转型基金的面板成立日是转型日，而月度净值从转型前旧基金开始，
+    因此回归样本须从面板成立月起算。
+    """
+    f = pd.read_excel(FUND_LIST, dtype=str, usecols=["fundid", "成立时间_earliest"])
+    f = f.drop_duplicates()
+    if f["fundid"].duplicated().any():
+        raise SystemExit("基金名单_fundid_date 同一 fundid 有多个成立日")
+    return f.set_index("fundid")["成立时间_earliest"].str[:7]
+
+
+INCEPTION = load_inception()
+
+
+def mark_sample(df: pd.DataFrame) -> pd.DataFrame:
+    """标出可用的月度收益观测（df 须已按 Symbol, year_month 排序）。
+
+    新增列：month_no（月序号）、pre_inception（成立月前有收益的行）、
+    sample（成立月起、非建仓月、非缺月后首行、增长率非空）。
+    """
+    # 月序号：用于判断相邻两行是否为连续的日历月
+    df["month_no"] = pd.PeriodIndex(df["year_month"], freq="M").astype("int64")
+    gap = df.groupby("Symbol")["month_no"].diff()
+
+    # 面板成立月之前的净值（转型前旧基金等）不用；不在面板的份额不限制
+    start_m = df["Symbol"].map(INCEPTION).fillna("")
+    after_start = df["year_month"].ge(start_m)
+    df["pre_inception"] = ~after_start & df["AdjustedNAVGrowth"].notna()
+
+    # 建仓月 = 面板成立月起第一个非空增长率；不受因子起始月截断影响
+    has_growth = df["AdjustedNAVGrowth"].notna() & after_start
+    first_ret = has_growth & (has_growth.astype(int).groupby(df["Symbol"]).cumsum() == 1)
+    after_gap = gap.gt(1)  # 缺月后的首行，增长率跨多个月
+    df["sample"] = has_growth & ~first_ret & ~after_gap
+    return df
 
 
 def load_panel(spec: dict) -> pd.DataFrame:
@@ -103,18 +145,9 @@ def load_panel(spec: dict) -> pd.DataFrame:
     df = df.sort_values(["Symbol", "year_month"], ignore_index=True)
 
     df["ExcessRet"] = df["AdjustedNAVGrowth"] / 100 - df[rf]
-    # 月序号：用于判断相邻两行是否为连续的日历月
-    df["month_no"] = pd.PeriodIndex(df["year_month"], freq="M").astype("int64")
-    gap = df.groupby("Symbol")["month_no"].diff()
-
-    # 建仓月按基金全部净值历史确定（截断前），避免把老基金截断后的首月误当建仓月
-    has_growth = df["AdjustedNAVGrowth"].notna()
-    first_ret = has_growth & (has_growth.astype(int).groupby(df["Symbol"]).cumsum() == 1)
-    after_gap = gap.gt(1)  # 缺月后的首行，增长率跨多个月
-    in_sample = df["year_month"].ge(spec["start"])  # 样本起始月之前截断
-    df["valid"] = (
-        df["ExcessRet"].notna() & df[factors].notna().all(axis=1) & in_sample & ~first_ret & ~after_gap
-    )
+    df = mark_sample(df)
+    in_sample = df["year_month"].ge(spec["start"])  # 因子起始月之前截断
+    df["valid"] = df["sample"] & df["ExcessRet"].notna() & df[factors].notna().all(axis=1) & in_sample
     return df
 
 
@@ -180,9 +213,11 @@ def run(spec: dict) -> None:
         f"{spec['label']}: 净值行={len(df)} 基金={len(all_funds)} | alpha 行={len(res)} "
         f"基金={res['Symbol'].nunique()} 月份={res['year_month'].min()}..{res['year_month'].max()}"
     )
+    pre = df.loc[df["pre_inception"]]
     print(
         f"  无 alpha 基金={len(no_alpha)}（其中有缺月={len(no_alpha & gap_funds)}）；"
-        f"有缺月基金={len(gap_funds)}"
+        f"有缺月基金={len(gap_funds)}；成立月前净值被剔除的基金={pre['Symbol'].nunique()}"
+        f"（{pre.groupby('Symbol').size().to_dict()}）"
     )
     write_out(res, spec)
     print(f"  写出 {spec['out'].name}")

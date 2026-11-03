@@ -39,7 +39,9 @@
 | `月度净值_rf_CH3.xlsx` | 含 `mktrf`/`SMB`/`VMG` 与 `CH_rf_mon`。 |
 | `月度净值_rf_CH4.xlsx` | 再含 `PMO`（用 CH4 自身 `SMB`）。 |
 | `rolling_alpha.py` | 24 个月滚动回归（statsmodels `RollingOLS`）计算月度 alpha。 |
-| `滚动alpha_CAPM.xlsx` / `…_三因子.xlsx` / `…_四因子.xlsx` / `…_五因子.xlsx` | 各模型月度 alpha、历史截距与 beta。 |
+| `滚动alpha_CAPM.xlsx` / `…_三因子.xlsx` / `…_四因子.xlsx` / `…_五因子.xlsx` / `…_CH3.xlsx` / `…_CH4.xlsx` | 各模型月度 alpha、历史截距与 beta。 |
+| `merge_alpha.py` | 把半年原始收益率和 6 个模型的半年平均 alpha（满 6 个月才填）接到 Manager 面板。 |
+| `基金名单_fundid_date_TotalEquity_Holder_BuySell_Fee_Manager_Alpha.xlsx` | 再含 `raw_ret` 与 `capm_alpha`/`ff3_alpha`/`car4_alpha`/`ff5_alpha`/`ch3_alpha`/`ch4_alpha`。不改 Manager 原表。 |
 
 ### 成立时间_earliest / 成立时间_latest
 
@@ -337,6 +339,7 @@ R_{j,s}=\widehat a_{j,t-1}+\sum_k\widehat\beta_{j,k,t-1}F_{k,s}+\varepsilon_{j,s
 - 被解释变量 \(R\) = `AdjustedNAVGrowth/100 − rf`，rf 与因子口径一致：CSMAR 四个模型用 `rf_monthly`，CH3/CH4 用 `CH_rf_mon`（`mktrf` 已减该 rf）。
 - 因子：CAPM `RiskPremium1`；三因子 `RiskPremium1, SMB1, HML1`；四因子再加 `UMD1`；五因子 `RiskPremium1, SMB1, HML1, RMW1, CMA1`（用五因子表自身的 `SMB1`/`HML1`）；CH3 `mktrf, SMB, VMG`；CH4 `mktrf, SMB, VMG, PMO`（用 CH4 自身的 `SMB`）。
 - CH 因子从 2000-01 起，CH3/CH4 只用 2000-01 及以后月份；建仓月仍按基金完整净值历史判定（老基金不会把 2000-01 误当建仓月）。
+- 成立月起算：样本从面板成立月（`基金名单_fundid_date.xlsx` 的 `成立时间_earliest` 所在月）开始，之前的净值不进入回归，成立月起第一个非空增长率当建仓月剔除。这主要针对转型基金：面板成立日是转型日，而月度净值从转型前的旧基金开始。实际被剔除成立月前净值的有 5 只：`162107`（金鹰中证 500 指数分级，49 个月）、`164205`（天弘深证成份指数 LOF，56）、`166007`（中欧沪深 300 指数增强 LOF，99）、`550015`（信诚添金分级债券，55）、`020018`（1 个月）。其余净值早于成立月的基金，成立月前只有一行空增长率，不受影响。
 - 历史回归含截距；当月 alpha **不减**历史截距；beta 每月重估；窗口截止上月，不含当月。实现上 `RollingOLS(window=24)` 第 \(i\) 行用 \(i-23..i\)，参数后移一行即得 \(i-24..i-1\)。
 - 建仓期：每只基金首行增长率本身为空，第一个非空增长率（建仓月）剔除，从第二个起计数。
 - 缺月：缺月之后第一行的增长率跨越多个月，剔除；只在日历连续的有效段内滚动，窗口不跨缺月。
@@ -350,10 +353,34 @@ R_{j,s}=\widehat a_{j,t-1}+\sum_k\widehat\beta_{j,k,t-1}F_{k,s}+\varepsilon_{j,s
 | `beta_<因子>` | 上月窗口估计的因子暴露 |
 | `WindowStart` / `WindowEnd` | 估计窗口首末月（\(t-24\)、\(t-1\)） |
 
-结果：CSMAR 四个模型都是 183,557 行、3,125 只基金，月份 2000-05～2026-06；CH3/CH4 都是 183,402 行、3,125 只基金，月份 2002-01～2026-06（少的 155 行是 2000-05～2001-12 的 alpha）。818 只基金无 alpha，多为净值不足 27 个月的新基金（其中 737 只仍存续到 2026-06）；有缺月的 36 只基金中 3 只因此无 alpha。
+结果：CSMAR 四个模型都是 183,297 行、3,125 只基金，月份 2000-05～2026-06；CH3/CH4 都是 183,142 行、3,125 只基金，月份 2002-01～2026-06（少的 155 行是 2000-05～2001-12 的 alpha）。818 只基金无 alpha，多为净值不足 27 个月的新基金（其中 737 只仍存续到 2026-06）；有缺月的 36 只基金中 3 只因此无 alpha。
 
 ```bash
 /opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python rolling_alpha.py
+```
+
+### 半年原始收益率与半年平均 alpha（并入面板）
+
+`merge_alpha.py` 读 `…_Manager.xlsx`、`月度净值.xlsx` 和 6 个 `滚动alpha_*.xlsx`，写出 `…_Manager_Alpha.xlsx`。
+
+- 半年归属：1～6 月对应 `YYYY0630`，7～12 月对应 `YYYY1231`。6 个月齐全才填值，否则留空。
+- `raw_ret`：半年几何平均月收益 \(\big[\prod_{6\text{个月}}(1+\text{AdjustedNAVGrowth}/100)\big]^{1/6}-1\)（小数制，月度口径，未减无风险利率）。样本规则与滚动回归相同（共用 `rolling_alpha.mark_sample`）：面板成立月起算，剔除建仓月和缺月后首行；但不需要 24 个月估计窗口。
+- `*_alpha`：例如 `20240630` 的 alpha = 2024 年 1～6 月月度 alpha 的算术平均（月度口径，不年化）。
+- 列名：`capm_alpha`（CAPM）、`ff3_alpha`（三因子）、`car4_alpha`（Carhart 四因子）、`ff5_alpha`（五因子）、`ch3_alpha`、`ch4_alpha`。
+- 合并键 `fundid = Symbol`。说明书表六中月度净值的 `Symbol` 是**份额代码**而非主代码，因此脚本先用 `CSMAR原始数据/基金份额信息/` 的份额类别信息表（`Fund_EVL_UnitClassInfo`）核对：净值份额 `(Symbol, FundClassID)` 对应的 `FundID` 必须等于面板 `基金ID`，否则报错。核对结果：面板基金在净值里的份额都是 `Symbol = MasterFundCode` 的主代码份额（`550015` 同一份额类别有转型前后两段历史，转型后一段与面板一致）；面板基金的 C 类等其他份额不在月度净值文件中，不存在一对多。
+
+`raw_ret` 结果：有值 41,324 行；留空 4,605 行，其中 6 个月不全 3,205、该半年无可用月份 1,320（基本是成立当半年只有成立月和建仓月）、整只基金无可用月份 80。`501205`、`501208` 的月度净值比面板成立日晚 3～4 个月才开始，各有 1 期面板行没有任何净值。所有有 alpha 的行都有 `raw_ret`。
+
+alpha 结果（6 列相同）：有值 28,098 行；留空 17,831 行，其中 6 个月不全 2,568（均为基金首个出 alpha 的半年）、该半年无 alpha 13,346（24 个月窗口尚未攒满）、整只基金无 alpha 1,917。CH 因子虽从 2000 年开始，但面板首期是 20021231，所以 CH 两列覆盖与其余四列相同。
+
+注意：
+
+- 时点：`20240630` 行的 alpha 是该半年已实现业绩，与同行规模、费用、经理特征同期；做预测时应用下一期 alpha。
+- alpha 只用主代码份额（通常 A 类）净值计算，未合并 C 类等其他份额。
+- 面板期内净值全称变化（转型或更名）的 22 只基金未切断滚动窗口，窗口可能跨越变化点：`000646`、`001734`、`003853`、`090019`、`160127`、`160212`、`161818`、`162107`、`162717`、`163406`、`166011`、`168002`、`169102`、`169103`、`169107`、`169109`、`501049`、`501054`、`501066`、`970094`、`970101`、`970113`。其中投资范围明显变化的有 `003853`（2018-04 由金鹰添惠纯债转为金鹰信息产业股票）、`090019`（2018-06 保本转普通混合）、`000646`（2019-09 医疗保健量化转量化优选）、`160212`（2013-02 可分离交易转 LOF）；东方红、兴证资管等多为定开转持有期或集合计划转公募，策略基本延续。
+
+```bash
+/opt/homebrew/Caskroom/miniconda/base/envs/fund-manager/bin/python merge_alpha.py
 ```
 
 ## 修改记录
@@ -380,3 +407,6 @@ R_{j,s}=\widehat a_{j,t-1}+\sum_k\widehat\beta_{j,k,t-1}F_{k,s}+\varepsilon_{j,s
 - 2026-11-03：新增 `rolling_alpha.py`，对三/四/五因子做 24 个月滚动回归（含截距、窗口截止上月），按上月 beta 计算当月 alpha（不减截距），写出 `滚动alpha_三因子.xlsx`、`…_四因子.xlsx`、`…_五因子.xlsx`。剔除建仓月与缺月后首行，窗口不跨缺月。各 183,557 行、3,125 只基金。净值原表未改。
 - 2026-11-03：`rolling_alpha.py` 新增 CAPM（只用三因子表的 `RiskPremium1`），写出 `滚动alpha_CAPM.xlsx`，样本规则同上，183,557 行、3,125 只基金。
 - 2026-11-03：`rolling_alpha.py` 新增 CH3/CH4（被解释变量减 `CH_rf_mon`，样本从 2000-01 截断），写出 `滚动alpha_CH3.xlsx`、`…_CH4.xlsx`，各 183,402 行、3,125 只基金，首个 alpha 在 2002-01。建仓月改为只按增长率非空判定（不受因子缺失影响），CSMAR 四个模型结果不变。
+- 2026-11-03：`rolling_alpha.py` 样本改为从面板成立月起算（转型基金不再用转型前旧基金净值估 beta），5 只基金受影响，重跑 6 个模型：CSMAR 各 183,297 行，CH 各 183,142 行。
+- 2026-11-03：新增 `merge_alpha.py`，6 个模型的月度 alpha 按半年取平均（满 6 个月才填），经份额类别信息表核对 `fundid`/`基金ID` 后左连接到 Manager 面板，写出 `…_Manager_Alpha.xlsx`。45,929 行不变，每列有值 28,098。Manager 原表与 alpha 表未改。
+- 2026-11-03：`merge_alpha.py` 新增 `raw_ret`（`月度净值.xlsx` 半年 6 个月几何平均月收益，样本规则同滚动回归但无 24 个月窗口），有值 41,324。`rolling_alpha.py` 把样本判定抽成 `mark_sample` 供两处共用，alpha 结果不变。
