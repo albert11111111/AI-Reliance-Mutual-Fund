@@ -1,0 +1,167 @@
+[
+  {
+    "path": "基金名单.xlsx",
+    "bytes": 14343420,
+    "sha256": "9f5ad3e0efb909d3390bb0b85de432d881f5519a4fbd787e8b98e55271fe61a7"
+  },
+  {
+    "path": "基金size.xlsx",
+    "bytes": 2104384,
+    "sha256": "567e738f4931998be87ae50fbf2d3c5c34dd95f8c0b8bbfe076190122405a7ae"
+  },
+  {
+    "path": "机构持有占比.xlsx",
+    "bytes": 6223058,
+    "sha256": "11272321071bfb372f13ef1f93071d48ee42a57a3701463902d17170bb14c42d"
+  },
+  {
+    "path": "换手率计算.xlsx",
+    "bytes": 1921354,
+    "sha256": "aed2f4fa9867e06f6ec949cf8982cb736f3ed6def80bc330ba16ff471b77e7ad"
+  },
+  {
+    "path": "费用.xlsx",
+    "bytes": 11503165,
+    "sha256": "6e497447544603274f17e2eee0779ab166ede554500d99daaa3c3ccb0475d832"
+  },
+  {
+    "path": "Fund_FundManager.xlsx",
+    "bytes": 2330229,
+    "sha256": "55008cdf9b401ce1120387fe0d565f5862fee6b19d63ee1bd6c5f2d0fa1aec62"
+  },
+  {
+    "path": "无风险利率.xlsx",
+    "bytes": 4375,
+    "sha256": "a61d7b2c91e0e88a5623b4a635c86c9b881c111c2b61ac0242f3888d6a9bb7c6"
+  },
+  {
+    "path": "月度净值.xlsx",
+    "bytes": 15246383,
+    "sha256": "7083af17349c0316b4fae3f41ec56e8d4719119a7c903d8bdfa4796061dda5cd"
+  },
+  {
+    "path": "三因子模型指标(月)133509346(仅供上海交通大学使用)/STK_MKT_THRFACMONTH.xlsx",
+    "bytes": 257150,
+    "sha256": "4398aff091d3538aac14b58eec4cb7bd9b573947c5586c872d849583deab6f65"
+  },
+  {
+    "path": "Carhart四因子080749357(仅供上海交通大学使用)/STK_MKT_CARHARTFOURFACTORS.xlsx",
+    "bytes": 377547,
+    "sha256": "60ed67b33fd22abf3613e5af3d80eef9d1a0763e0b1f8bc8a362f64d7a46a72c"
+  },
+  {
+    "path": "五因子模型指标(月)133455709(仅供上海交通大学使用)/STK_MKT_FIVEFACMONTH.xlsx",
+    "bytes": 741728,
+    "sha256": "e1c35eac026e12867a94662c371ed5e51381c1a06b7f6036714f5763bee82e68"
+  },
+  {
+    "path": "CH因子_鸣石_20261103/CH3_factors_monthly_202608.xlsx",
+    "bytes": 14427,
+    "sha256": "8d956043a1a39d10bc1b777a865fca8cf40b1b628c1d94f900ba2b23c22819a4"
+  },
+  {
+    "path": "CH因子_鸣石_20261103/CH4_factors_monthly_202608.xlsx",
+    "bytes": 16055,
+    "sha256": "9ebb2d93fb8730f100251a2fe511ea4749c332d33183662eee75558f0b632555"
+  },
+  {
+    "path": "基金日净值近半年评价文件121131702(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 9783283,
+    "sha256": "86e7281cf66735ab6ed041ad6983839c6fa710c784fffb91594b812da65b6864"
+  },
+  {
+    "path": "基金日净值近半年评价文件121512452(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 12681583,
+    "sha256": "f61242ae867779ab28cbdbf054bb581864e1838d022f0c8bd462dcc43881eb51"
+  },
+  {
+    "path": "基金日净值近半年评价文件121659669(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 190680873,
+    "sha256": "fe0d30e2b961d4b117f812af20ff68c4ec60295f7c2ec159b7544fb4f646eb70"
+  },
+  {
+    "path": "基金日净值近半年评价文件121828824(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 15941331,
+    "sha256": "d5ceb8dd43540971083dffa1e6072637838b7004eb012defda7473d514279664"
+  },
+  {
+    "path": "基金日净值近半年评价文件121835171(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 19006972,
+    "sha256": "682c8fe325e759d4792e4b298d44a3712c3e5da64d43e20a31ec277fa3abe7eb"
+  },
+  {
+    "path": "基金日净值近半年评价文件121900474(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 21686795,
+    "sha256": "a1b2a00a0f5c0bf2aa98665c44e5e5b0def68bec7ec01d427add3928d0252d59"
+  },
+  {
+    "path": "基金日净值近半年评价文件121927902(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 24304463,
+    "sha256": "0bfac20399beed389a2126a9bcbd074476d527e27799835b0e689b33624beaba"
+  },
+  {
+    "path": "基金日净值近半年评价文件121959835(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 29755511,
+    "sha256": "1e5e4dfb267944c51f1ddd1eb38b43ee43688a9ba143927fecf5e4432beb9b68"
+  },
+  {
+    "path": "基金日净值近半年评价文件122003549(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 34526648,
+    "sha256": "48db93acc593240de9f44409bda6e99a1adde400a2c9a2a687976cb9c87f0351"
+  },
+  {
+    "path": "基金日净值近半年评价文件123104553(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 57656437,
+    "sha256": "32507ce571c7bcb5ec770350be8355cad5fa2dc71eb489291a9eeca59e9fb181"
+  },
+  {
+    "path": "基金日净值近半年评价文件123209348(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 77334759,
+    "sha256": "ba89e8c2f897ac97fe2e83254fd3e85bd7eaab73ddff4c35bb84d240ac1bd92a"
+  },
+  {
+    "path": "基金日净值近半年评价文件123209348(仅供上海交通大学使用) (2)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 77334759,
+    "sha256": "ba89e8c2f897ac97fe2e83254fd3e85bd7eaab73ddff4c35bb84d240ac1bd92a"
+  },
+  {
+    "path": "基金日净值近半年评价文件123209348(仅供上海交通大学使用) (2) 2/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 77334759,
+    "sha256": "ba89e8c2f897ac97fe2e83254fd3e85bd7eaab73ddff4c35bb84d240ac1bd92a"
+  },
+  {
+    "path": "基金日净值近半年评价文件123248510(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 47829791,
+    "sha256": "cf21f4f9b0cdf4167a4d84ab9bff96cc18636b166a00de1b9000588c0b2cdf3f"
+  },
+  {
+    "path": "基金日净值近半年评价文件123305934(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 39719042,
+    "sha256": "6e8366a996a32c12ac361842f1332525525abf16f0213f05840cee0ed6e81de2"
+  },
+  {
+    "path": "基金日净值近半年评价文件123455740(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 112847454,
+    "sha256": "6439555149db9322f5f1780dcc1ffb0ad8b3a15dd9fc4533ddaa9060f89a2c6c"
+  },
+  {
+    "path": "基金日净值近半年评价文件123558034(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 145758993,
+    "sha256": "c6020d45c193ee5197aaf30315f7a93e26a45f21e2b20b962a0e4cdc79050460"
+  },
+  {
+    "path": "基金日净值近半年评价文件123819786(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 165670326,
+    "sha256": "1ad0f2b629059b7ae5fd12937b057fab9a83e6956cde6ff44ff6d7a3def8bf87"
+  },
+  {
+    "path": "基金日净值近半年评价文件124025040(仅供上海交通大学使用)/FUND_EVL_DAYAHAY.xlsx",
+    "bytes": 179046835,
+    "sha256": "fe59e3a289e44ec4beab2abfc1edf8d96ff5afd81fc56b760fd3087f5930d601"
+  },
+  {
+    "path": "CSMAR原始数据/基金份额信息/基金份额类别信息表144442274(仅供上海交通大学使用).zip",
+    "bytes": 1764530,
+    "sha256": "346c66731b6d01a607393bd6d6de05d9ab73131ac3247528e4a6aed36f98d1f7"
+  }
+]
