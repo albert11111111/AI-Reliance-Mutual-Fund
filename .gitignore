@@ -3,6 +3,7 @@ __pycache__/
 node_modules/
 
 # 数据、表格、压缩包不进仓库
+*.[tT][xX][tT]
 *.xlsx
 *.xls
 *.parquet
