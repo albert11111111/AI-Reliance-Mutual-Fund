@@ -4,6 +4,7 @@ node_modules/
 
 # 数据、表格、压缩包不进仓库
 *.[tT][xX][tT]
+*.[jJ][sS][oO][nN]
 *.xlsx
 *.xls
 *.parquet
